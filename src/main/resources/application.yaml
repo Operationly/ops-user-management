@@ -29,5 +29,5 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 workos:
-  api-key: ${WORKOS_API_KEY:sample_api_key}
-  client-id: ${WORKOS_CLIENT_ID:sample_client_id}
+  api-key: ${WORKOS_API_KEY}
+  client-id: ${WORKOS_CLIENT_ID}
