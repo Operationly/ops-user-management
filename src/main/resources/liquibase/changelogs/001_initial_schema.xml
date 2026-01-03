@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Create tenant table -->
+    <changeSet id="001-create-tenant-table" author="operationly">
+        <createTable tableName="tenant">
+            <column name="tenant_id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="plan" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_tenant_status" tableName="tenant">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex indexName="idx_tenant_plan" tableName="tenant">
+            <column name="plan"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="tenant"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Create user_account table with nullable tenant_id -->
+    <changeSet id="002-create-user-account-table" author="operationly">
+        <createTable tableName="user_account">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="workos_user_id" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="tenant_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="first_name" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="last_name" type="VARCHAR(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="email_verified" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="profile_picture_url" type="VARCHAR(512)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="last_sign_in_at" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="user_account"
+                baseColumnNames="tenant_id"
+                constraintName="fk_user_account_tenant"
+                referencedTableName="tenant"
+                referencedColumnNames="tenant_id"
+                onDelete="RESTRICT"
+                onUpdate="CASCADE"/>
+
+        <createIndex indexName="idx_workos_user_id" tableName="user_account" unique="true">
+            <column name="workos_user_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_email" tableName="user_account">
+            <column name="email"/>
+        </createIndex>
+
+        <createIndex indexName="idx_tenant_id" tableName="user_account">
+            <column name="tenant_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="user_account"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
+

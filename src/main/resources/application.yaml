@@ -1,0 +1,33 @@
+server:
+  port: 8181
+  servlet:
+    context-path: /operationly/api/v1/users
+
+spring:
+  application:
+    name: user-management
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:9296}
+  datasource:
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+      leak-detection-threshold: 20000
+    # Default DB_HOST changed to localhost:5432 for local development. In Docker compose use `DB_HOST=postgres` or set DB_HOST env var accordingly.
+    url: jdbc:postgresql://${DB_HOST:localhost:5432}/${DB_NAME:operationly}
+    username: ${DB_USER_NAME:postgres}
+    password: ${DB_PASSWORD:root}
+  liquibase:
+    change-log: classpath:liquibase/master_user_management.xml
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        formats_sql: true
+        show_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+workos:
+  api-key: ${WORKOS_API_KEY:sk_test_a2V5XzAxS0RKN1lFVFhaOVFCRjlCUk1TNDlBRzBBLDh2Qk81N1dKZmR4SmpINng3MERpMnQ4U3A}
+  client-id: ${WORKOS_CLIENT_ID:client_01KDJ7YFC5BD1R0VRD0N5GKVY8}
