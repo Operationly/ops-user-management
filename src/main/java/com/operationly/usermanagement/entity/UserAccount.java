@@ -13,7 +13,7 @@ import java.util.UUID;
 @Table(name = "user_account", indexes = {
     @Index(name = "idx_workos_user_id", columnList = "workos_user_id", unique = true),
     @Index(name = "idx_email", columnList = "email"),
-    @Index(name = "idx_tenant_id", columnList = "tenant_id")
+    @Index(name = "idx_organization_id", columnList = "organization_id")
 })
 @Data
 @NoArgsConstructor
@@ -28,8 +28,8 @@ public class UserAccount {
     @Column(name = "workos_user_id", nullable = false, unique = true, length = 255)
     private String workosUserId;
 
-    @Column(name = "tenant_id", nullable = true, updatable = true)
-    private UUID tenantId;
+    @Column(name = "organization_id", nullable = true, updatable = true)
+    private UUID organizationId;
 
     @Column(name = "email", nullable = false, length = 255)
     private String email;

@@ -1,6 +1,6 @@
 # Operationly User Management Service
 
-A Spring Boot microservice that handles user authentication and tenant management for the Operationly platform. This service integrates with WorkOS for authentication and manages user accounts and tenant information.
+A Spring Boot microservice that handles user authentication and organization management for the Operationly platform. This service integrates with WorkOS for authentication and manages user accounts and organization information.
 
 ## Overview
 
@@ -8,7 +8,7 @@ This microservice provides:
 
 - **User Authentication**: Integration with WorkOS for secure user authentication
 - **User Account Management**: CRUD operations for user accounts
-- **Tenant Management**: Multi-tenant support with tenant creation and management
+- **Tenant Management**: Multi-organization support with organization creation and management
 - **Database Management**: PostgreSQL with Liquibase for schema versioning
 - **Service Discovery**: Eureka integration for microservice discovery
 - **Configuration Management**: Spring Cloud Config integration
@@ -124,7 +124,7 @@ Authorization: Bearer <sessionToken>
 ```
 
 **Query Parameters**:
-- `tenantId` (optional): UUID of the tenant. Can be omitted during initial signup.
+- `tenantId` (optional): UUID of the organization. Can be omitted during initial signup.
 
 **Response**:
 ```json
@@ -166,7 +166,7 @@ The database is managed by Liquibase with the following structure:
   - tenantId (foreign key)
   - Timestamps (createdAt, updatedAt)
 
-- **tenant**: Stores tenant/organization information
+- **organization**: Stores organization/organization information
   - tenantId (primary key)
   - name
   - status

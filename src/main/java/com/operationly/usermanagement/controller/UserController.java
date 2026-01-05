@@ -3,7 +3,7 @@ package com.operationly.usermanagement.controller;
 import com.operationly.usermanagement.dto.BaseResponse;
 import com.operationly.usermanagement.dto.ErrorDetails;
 import com.operationly.usermanagement.dto.UserAccountDto;
-import com.operationly.usermanagement.service.TenantService;
+import com.operationly.usermanagement.service.OrganizationService;
 import com.operationly.usermanagement.service.WorkOSService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +23,7 @@ import static com.operationly.usermanagement.constants.UserConstants.*;
 public class UserController {
 
     private final WorkOSService workOSService;
-    private final TenantService tenantService;
+    private final OrganizationService organizationService;
 
     /**
      * Sync API endpoint that validates the Bearer token, extracts userId from WorkOS,
@@ -33,14 +33,14 @@ public class UserController {
      * 1. Validates the Bearer token and extracts WorkOS userId
      * 2. Fetches user details from WorkOS
      * 3. Checks if user exists in user_account table
-     * 4. If exists, updates the user details (doesn't change tenant_id if already set)
-     * 5. If not exists, creates a new entry (tenantId is optional - can be null during signup)
+     * 4. If exists, updates the user details (doesn't change organization_id if already set)
+     * 5. If not exists, creates a new entry (organizationId is optional - can be null during signup)
      *
      * Expected header:
      *   Authorization: Bearer &lt;sessionToken&gt;
      *
      * Optional query parameter:
-     *   tenantId: UUID of the tenant (if not present in JWT token). Can be omitted during initial signup.
+     *   organizationId: UUID of the organization (if not present in JWT token). Can be omitted during initial signup.
      *
      * (Optional) For backward compatibility you can still send it via cookie `wos_session`,
      * but the Bearer token takes precedence.
@@ -49,7 +49,7 @@ public class UserController {
     public ResponseEntity<BaseResponse<UserAccountDto>> syncUser(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @CookieValue(value = "wos_session", required = false) String sessionTokenCookie,
-            @RequestParam(value = "tenantId", required = false) String tenantIdParam) {
+            @RequestParam(value = "organizationId", required = false) String organizationIdParam) {
 
         BaseResponse<UserAccountDto> response = new BaseResponse<>();
         ErrorDetails errorDetails = new ErrorDetails();
@@ -73,15 +73,15 @@ public class UserController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
             
-            // Parse tenantId from parameter if provided
-            UUID tenantId = null;
-            if (tenantIdParam != null && !tenantIdParam.isEmpty()) {
+            // Parse organizationId from parameter if provided
+            UUID organizationId = null;
+            if (organizationIdParam != null && !organizationIdParam.isEmpty()) {
                 try {
-                    tenantId = UUID.fromString(tenantIdParam);
+                    organizationId = UUID.fromString(organizationIdParam);
                 } catch (IllegalArgumentException e) {
                     response.setStatus(FAILURE);
-                    errorDetails.setError("Invalid tenantId format");
-                    errorDetails.setMessage("tenantId must be a valid UUID");
+                    errorDetails.setError("Invalid organizationId format");
+                    errorDetails.setMessage("organizationId must be a valid UUID");
                     response.setErrors(Collections.singletonList(errorDetails));
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
                 }
@@ -89,7 +89,7 @@ public class UserController {
             
             // Sync user with local database
             response.setStatus(SUCCESS);
-            response.setResponse(workOSService.syncUserFromSessionToken(sessionToken, tenantId));
+            response.setResponse(workOSService.syncUserFromSessionToken(sessionToken, organizationId));
 
             return ResponseEntity.ok(response);
             
@@ -104,7 +104,7 @@ public class UserController {
     }
 
     /**
-     * Creates a tenant and attaches it to a user account.
+     * Creates a organization and attaches it to a user account.
      * This endpoint automatically fetches organization details from WorkOS if organization_id is in the token,
      * otherwise uses the provided request body details.
      *
@@ -118,11 +118,11 @@ public class UserController {
      *     "status": "ACTIVE" | "SUSPENDED"  // Optional, defaults to ACTIVE
      *   }
      */
-    @PostMapping("/tenant/create")
-    public ResponseEntity<BaseResponse<?>> createTenantAndAttachToUser(
+    @PostMapping("/organization/create")
+    public ResponseEntity<BaseResponse<?>> createorganizationAndAttachToUser(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @CookieValue(value = "wos_session", required = false) String sessionTokenCookie,
-            @RequestParam(name = "tenantName") String tenantName) {
+            @RequestParam(name = "organizationName") String organizationName) {
 
         BaseResponse<?> response = new BaseResponse<>();
         ErrorDetails errorDetails = new ErrorDetails();
@@ -147,18 +147,18 @@ public class UserController {
             // Extract WorkOS user ID from token
             String workosUserId = workOSService.getUserIdFromSessionToken(sessionToken);
             
-            // Create tenant and attach to user (tenant will be inserted into DB)
-            tenantService.createTenantAndAttachToUser(workosUserId, tenantName);
+            // Create organization and attach to user (organization will be inserted into DB)
+            organizationService.createOrganizationAndAttachToUser(workosUserId, organizationName);
             
-            log.info("Successfully created and inserted tenant {} into database for user {}", 
-                    tenantName, workosUserId);
+            log.info("Successfully created and inserted organization {} into database for user {}", 
+                    organizationName, workosUserId);
 
             response.setStatus(SUCCESS);
             return ResponseEntity.status(HttpStatus.OK).body(response);
             
         } catch (Exception e) {
             response.setStatus(FAILURE);
-            errorDetails.setError("Failed to create tenant");
+            errorDetails.setError("Failed to create organization");
             errorDetails.setMessage(e.getMessage());
             response.setErrors(Collections.singletonList(errorDetails));
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
@@ -166,8 +166,8 @@ public class UserController {
     }
 
     /**
-     * Gets user details including tenant information.
-     * Returns all available user and tenant details.
+     * Gets user details including organization information.
+     * Returns all available user and organization details.
      *
      * Expected header:
      *   Authorization: Bearer &lt;sessionToken&gt;

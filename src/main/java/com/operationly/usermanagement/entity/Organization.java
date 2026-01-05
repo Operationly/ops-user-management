@@ -10,19 +10,19 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "tenant", indexes = {
-    @Index(name = "idx_tenant_status", columnList = "status"),
-    @Index(name = "idx_tenant_plan", columnList = "plan")
+@Table(name = "organization", indexes = {
+    @Index(name = "idx_organization_status", columnList = "status"),
+    @Index(name = "idx_organization_plan", columnList = "plan")
 })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Tenant {
+public class Organization {
 
     @Id
-    @Column(name = "tenant_id", nullable = false, updatable = false)
-    private UUID tenantId;
+    @Column(name = "organization_id", nullable = false, updatable = false)
+    private UUID organizationId;
 
     @Column(name = "name", length = 255)
     private String name;
@@ -44,8 +44,8 @@ public class Tenant {
     @PrePersist
     protected void onCreate() {
         LocalDateTime now = LocalDateTime.now();
-        if (tenantId == null) {
-            tenantId = UUID.randomUUID();
+        if (organizationId == null) {
+            organizationId = UUID.randomUUID();
         }
         createdAt = now;
         updatedAt = now;

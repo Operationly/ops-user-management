@@ -5,7 +5,6 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
-    <!-- Create user_account table with nullable tenant_id -->
     <changeSet id="001-add-onboarding-completed-column-user-account-table" author="operationly">
         <addColumn tableName="user_account">
             <column name="onboarding_completed" type="BOOLEAN" defaultValueBoolean="false">

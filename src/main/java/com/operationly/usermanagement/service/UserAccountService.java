@@ -24,15 +24,15 @@ public class UserAccountService {
 
     /**
      * Syncs a WorkOS user with the local user_account table.
-     * If the user exists, updates their information (but doesn't change tenant_id if already set).
-     * If not, creates a new entry. Tenant ID is optional - can be null during initial signup.
+     * If the user exists, updates their information (but doesn't change organization_id if already set).
+     * If not, creates a new entry. Organization ID is optional - can be null during initial signup.
      *
      * @param workosUser The WorkOS User object
-     * @param tenantId   Optional tenant ID. Can be null during initial signup.
+     * @param organizationId   Optional organization ID. Can be null during initial signup.
      * @return The synced UserAccount entity
      */
     @Transactional
-    public UserAccount syncUserAccount(User workosUser, UUID tenantId) {
+    public UserAccount syncUserAccount(User workosUser, UUID organizationId) {
         String workosUserId = workosUser.getId();
 
         // Check if user already exists
@@ -40,14 +40,14 @@ public class UserAccountService {
 
         boolean isLastSignInPresent = StringUtils.isNotEmpty(workosUser.getLastSignInAt());
         if (existingUserOpt.isPresent()) {
-            // Update existing user - don't modify tenant_id if it's already set
+            // Update existing user - don't modify organization_id if it's already set
             UserAccount existingUser = existingUserOpt.get();
             log.info("Updating existing user account for WorkOS user ID: {}", workosUserId);
 
-            // Only update tenant_id if it's currently null and a new tenantId is provided
-            if (existingUser.getTenantId() == null && tenantId != null) {
-                existingUser.setTenantId(tenantId);
-                log.info("Attaching tenant ID {} to existing user", tenantId);
+            // Only update organization_id if it's currently null and a new organizationId is provided
+            if (existingUser.getOrganizationId() == null && organizationId != null) {
+                existingUser.setOrganizationId(organizationId);
+                log.info("Attaching organization ID {} to existing user", organizationId);
             }
 
             existingUser.setEmail(workosUser.getEmail());
@@ -68,13 +68,13 @@ public class UserAccountService {
 
             return userAccountRepository.save(existingUser);
         } else {
-            // Create new user (tenantId can be null)
-            log.info("Creating new user account for WorkOS user ID: {} with tenant ID: {}",
-                    workosUserId, tenantId);
+            // Create new user (organizationId can be null)
+            log.info("Creating new user account for WorkOS user ID: {} with organization ID: {}",
+                    workosUserId, organizationId);
 
             UserAccount newUser = UserAccount.builder()
                     .workosUserId(workosUserId)
-                    .tenantId(tenantId)
+                    .organizationId(organizationId)
                     .email(workosUser.getEmail())
                     .firstName(workosUser.getFirstName())
                     .lastName(workosUser.getLastName())

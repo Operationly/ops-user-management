@@ -7,6 +7,7 @@
 
     <include file="liquibase/changelogs/001_initial_schema.xml"/>
     <include file="liquibase/changelogs/002_new_column_in_user_account.xml"/>
+    <include file="liquibase/changelogs/003_rename_tenant_column.xml"/>
 
 </databaseChangeLog>
 

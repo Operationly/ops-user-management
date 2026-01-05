@@ -12,7 +12,7 @@
 	<artifactId>ops-user-management</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>ops-user-management</name>
-	<description>Service which handles user authentication and tenant management</description>
+	<description>Service which handles user authentication and organization management</description>
 	<url/>
 	<licenses>
 		<license/>

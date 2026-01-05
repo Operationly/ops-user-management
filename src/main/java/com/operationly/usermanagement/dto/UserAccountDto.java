@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class UserAccountDto {
     private Long id;
     private String workosUserId;
-    private TenantDto tenant;
+    private OrganizationDto organization;
     private String email;
     private String firstName;
     private String lastName;
