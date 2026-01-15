@@ -1,7 +1,7 @@
 server:
   port: 8181
   servlet:
-    context-path: /operationly/api/v1/users
+    context-path: /operationly/user-management
 
 spring:
   application:
@@ -25,9 +25,15 @@ spring:
     properties:
       hibernate:
         formats_sql: true
-        show_sql: true
+        show_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 workos:
   api-key: ${WORKOS_API_KEY}
   client-id: ${WORKOS_CLIENT_ID}
+
+logging:
+  level:
+    org.springframework.security: ERROR
+    com.operationly.usermanagement.filter.JwtAuthFilter: DEBUG
+    com.operationly.usermanagement: DEBUG

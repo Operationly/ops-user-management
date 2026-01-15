@@ -18,6 +18,7 @@ public class UserAccountDto {
     private String lastName;
     private Boolean emailVerified;
     private Boolean onboardingCompleted;
+    private String role;
     private String profilePictureUrl;
     private String lastSignInAt;
     private String createdAt;

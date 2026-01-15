@@ -1,10 +1,7 @@
 package com.operationly.usermanagement.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -40,6 +37,9 @@ public class UserAccount {
     @Column(name = "last_name", length = 255)
     private String lastName;
 
+    @Column(name = "role", length = 100)
+    private Role role;
+
     @Column(name = "email_verified", nullable = false)
     @Builder.Default
     private Boolean emailVerified = false;
@@ -70,6 +70,16 @@ public class UserAccount {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    public enum Role {
+        USER("USER"),
+        ADMIN("ADMIN"),
+        SUPER_ADMIN("SUPER_ADMIN");
+
+        private final String value;
     }
 }
 

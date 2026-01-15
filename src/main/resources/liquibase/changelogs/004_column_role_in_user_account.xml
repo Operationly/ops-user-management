@@ -5,10 +5,13 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
-    <include file="liquibase/changelogs/001_initial_schema.xml"/>
-    <include file="liquibase/changelogs/002_new_column_in_user_account.xml"/>
-    <include file="liquibase/changelogs/003_rename_tenant_column.xml"/>
-    <include file="liquibase/changelogs/004_column_role_in_user_account.xml"/>
+    <changeSet id="004-add-role-column-user-account-table" author="operationly">
+        <addColumn tableName="user_account">
+            <column name="role" type="VARCHAR(50)" defaultValue="ROLE_USER">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
 
 </databaseChangeLog>
 
