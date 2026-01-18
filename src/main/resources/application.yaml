@@ -35,5 +35,10 @@ workos:
 logging:
   level:
     org.springframework.security: ERROR
-    com.operationly.usermanagement.filter.JwtAuthFilter: DEBUG
     com.operationly.usermanagement: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
