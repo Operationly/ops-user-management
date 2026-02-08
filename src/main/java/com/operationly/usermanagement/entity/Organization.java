@@ -1,18 +1,17 @@
 package com.operationly.usermanagement.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
 @Table(name = "organization", indexes = {
-    @Index(name = "idx_organization_status", columnList = "status"),
-    @Index(name = "idx_organization_plan", columnList = "plan")
+        @Index(name = "idx_organization_status", columnList = "status"),
+        @Index(name = "idx_organization_plan", columnList = "plan")
 })
 @Data
 @NoArgsConstructor
@@ -41,6 +40,12 @@ public class Organization {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Builder.Default
+    private List<UserOrganization> userOrganizations = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         LocalDateTime now = LocalDateTime.now();
@@ -56,12 +61,4 @@ public class Organization {
         updatedAt = LocalDateTime.now();
     }
 
-    public enum Plan {
-        FREE, PRO, ENTERPRISE
-    }
-
-    public enum Status {
-        ACTIVE, SUSPENDED
-    }
 }
-

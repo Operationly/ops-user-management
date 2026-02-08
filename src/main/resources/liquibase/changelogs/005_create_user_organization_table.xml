@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="005_create_user_organization_table" author="operationly">
+        <createTable tableName="user_organization">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_user_organization_user" references="user_account(id)"/>
+            </column>
+            <column name="organization_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_user_organization_organization" references="organization(organization_id)"/>
+            </column>
+            <column name="role" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="user_organization" columnNames="user_id, organization_id" constraintName="uq_user_organization_user_org"/>
+
+        <!-- Migrate existing data -->
+        <sql>
+            INSERT INTO user_organization (user_id, organization_id, role, created_at, updated_at)
+            SELECT id, organization_id, role, NOW(), NOW()
+            FROM user_account
+            WHERE organization_id IS NOT NULL;
+        </sql>
+
+        <!-- Drop columns from user_account -->
+        <dropForeignKeyConstraint baseTableName="user_account" constraintName="fk_user_account_tenant"/>
+        <dropIndex tableName="user_account" indexName="idx_tenant_id"/>
+        <dropColumn tableName="user_account" columnName="organization_id"/>
+        <dropColumn tableName="user_account" columnName="role"/>
+    </changeSet>
+
+</databaseChangeLog>

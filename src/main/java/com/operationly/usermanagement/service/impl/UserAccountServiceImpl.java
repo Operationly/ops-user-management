@@ -8,8 +8,11 @@ import com.operationly.usermanagement.dto.UserContextDto;
 import com.operationly.usermanagement.entity.Organization;
 import com.operationly.usermanagement.entity.UserAccount;
 import com.operationly.usermanagement.exception.BusinessException;
+import com.operationly.usermanagement.entity.UserOrganization;
+import com.operationly.usermanagement.entity.Role;
 import com.operationly.usermanagement.repository.OrganizationRepository;
 import com.operationly.usermanagement.repository.UserAccountRepository;
+import com.operationly.usermanagement.repository.UserOrganizationRepository;
 import com.workos.usermanagement.models.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,6 +34,7 @@ public class UserAccountServiceImpl implements UserAccountService {
 
     private final UserAccountRepository userAccountRepository;
     private final OrganizationRepository organizationRepository;
+    private final UserOrganizationRepository userOrganizationRepository;
     private final WorkOSService workOSService;
 
     /**
@@ -45,6 +50,7 @@ public class UserAccountServiceImpl implements UserAccountService {
      * @return The synced UserAccount entity
      */
     @Transactional
+    @Override
     public UserAccountDto syncUserAccount(String workosUserId, UUID organizationId) {
         User workosUser = workOSService.getWorkOsUserById(workosUserId);
         Optional<UserAccount> existingUserOpt = userAccountRepository.findByWorkosUserId(workosUserId);
@@ -64,11 +70,22 @@ public class UserAccountServiceImpl implements UserAccountService {
     private UserAccount updateExistingUser(UserAccount existingUser, User workosUser, UUID organizationId) {
         log.info("Updating existing user account for WorkOS user ID: {}", existingUser.getWorkosUserId());
 
-        // Only update organization_id if it's currently null and a new organizationId
-        // is provided
-        if (existingUser.getOrganizationId() == null && organizationId != null) {
-            existingUser.setOrganizationId(organizationId);
-            log.info("Attaching organization ID {} to existing user", organizationId);
+        // Only update organization if user has no organizations and a new
+        // organizationId is provided
+        List<UserOrganization> existingOrgs = userOrganizationRepository.findByUser(existingUser);
+        if (existingOrgs.isEmpty() && organizationId != null) {
+            Optional<Organization> orgOpt = organizationRepository.findByOrganizationId(organizationId);
+            if (orgOpt.isPresent()) {
+                UserOrganization userOrg = UserOrganization.builder()
+                        .user(existingUser)
+                        .organization(orgOpt.get())
+                        .role(Role.MEMBER)
+                        .build();
+                userOrganizationRepository.save(userOrg);
+                log.info("Attaching organization ID {} to existing user", organizationId);
+            } else {
+                log.warn("Organization ID {} not found, cannot attach to user", organizationId);
+            }
         }
 
         existingUser.setEmail(workosUser.getEmail());
@@ -82,19 +99,35 @@ public class UserAccountServiceImpl implements UserAccountService {
 
     private UserAccount createNewUser(String workosUserId, User workosUser, UUID organizationId) {
         log.warn("User verified by WorkOS but not found in local DB: {}", workosUserId);
-        log.info("Creating new user account for WorkOS user ID: {} with organization ID: {}",
-                workosUserId, organizationId);
+        log.info("Creating new user account for WorkOS user ID: {}", workosUserId);
 
-        return UserAccount.builder()
+        UserAccount newUser = UserAccount.builder()
                 .workosUserId(workosUserId)
-                .organizationId(organizationId)
                 .email(workosUser.getEmail())
                 .firstName(workosUser.getFirstName())
                 .lastName(workosUser.getLastName())
                 .emailVerified(workosUser.getEmailVerified())
                 .profilePictureUrl(workosUser.getProfilePictureUrl())
-                .role(UserAccount.Role.USER)
                 .build();
+
+        newUser = userAccountRepository.save(newUser);
+
+        if (organizationId != null) {
+            Optional<Organization> orgOpt = organizationRepository.findByOrganizationId(organizationId);
+            if (orgOpt.isPresent()) {
+                UserOrganization userOrg = UserOrganization.builder()
+                        .user(newUser)
+                        .organization(orgOpt.get())
+                        .role(Role.MEMBER)
+                        .build();
+                userOrganizationRepository.save(userOrg);
+                log.info("Attached organization ID {} to new user", organizationId);
+            } else {
+                log.warn("Organization ID {} not found, cannot attach to new user", organizationId);
+            }
+        }
+
+        return newUser;
     }
 
     private void updateLastSignIn(UserAccount userAccount, String lastSignInAtStr) {
@@ -109,12 +142,14 @@ public class UserAccountServiceImpl implements UserAccountService {
     }
 
     private Optional<Organization> resolveOrganization(UserAccount userAccount) {
-        if (userAccount.getOrganizationId() != null) {
-            return organizationRepository.findByOrganizationId(userAccount.getOrganizationId());
+        List<UserOrganization> userOrgs = userOrganizationRepository.findByUser(userAccount);
+        if (!userOrgs.isEmpty()) {
+            return Optional.of(userOrgs.get(0).getOrganization());
         }
         return Optional.empty();
     }
 
+    @Override
     public UserAccountDto getUserInfo(String workosUserId) {
         Optional<UserAccount> userAccountOptional = userAccountRepository.findByWorkosUserId(workosUserId);
 
@@ -129,6 +164,16 @@ public class UserAccountServiceImpl implements UserAccountService {
     }
 
     private UserAccountDto constructUserDto(UserAccount userAccount, Optional<Organization> organizationOpt) {
+        String roleValue = null;
+        if (organizationOpt.isPresent()) {
+            Optional<UserOrganization> userOrgOpt = userOrganizationRepository.findByUserAndOrganizationOrganizationId(
+                    userAccount,
+                    organizationOpt.get().getOrganizationId());
+            if (userOrgOpt.isPresent()) {
+                roleValue = userOrgOpt.get().getRole().getValue();
+            }
+        }
+
         return UserAccountDto.builder()
                 .id(userAccount.getId())
                 .workosUserId(userAccount.getWorkosUserId())
@@ -137,7 +182,7 @@ public class UserAccountServiceImpl implements UserAccountService {
                 .firstName(userAccount.getFirstName())
                 .lastName(userAccount.getLastName())
                 .emailVerified(userAccount.getEmailVerified())
-                .role(userAccount.getRole() != null ? userAccount.getRole().getValue() : null)
+                .role(roleValue)
                 .onboardingCompleted(userAccount.getOnboardingCompleted())
                 .profilePictureUrl(userAccount.getProfilePictureUrl())
                 .lastSignInAt(userAccount.getLastSignInAt() != null ? userAccount.getLastSignInAt().toString() : null)
@@ -163,21 +208,55 @@ public class UserAccountServiceImpl implements UserAccountService {
      * @param workosUserId The WorkOS user ID
      * @return Optional UserAccount
      */
+    @Override
     public UserContextDto getUserAccountByWorkosUserId(String workosUserId) {
         Optional<UserAccount> userAccountOpt = userAccountRepository.findByWorkosUserId(workosUserId);
         UserContextDto context = null;
         if (userAccountOpt.isPresent()) {
             UserAccount userAccount = userAccountOpt.get();
+
+            // Resolve primary organization (first one found)
+            List<UserOrganization> userOrgs = userOrganizationRepository.findByUser(userAccount);
+            UserOrganization primaryOrg = userOrgs.isEmpty() ? null : userOrgs.get(0);
+
             context = UserContextDto.builder()
                     .userId(String.valueOf(userAccount.getId()))
                     .workosUserId(userAccount.getWorkosUserId())
                     .email(userAccount.getEmail())
-                    .role(userAccount.getRole() != null ? userAccount.getRole().getValue() : null)
+                    .role(primaryOrg != null ? primaryOrg.getRole().getValue() : null)
                     .organizationId(
-                            userAccount.getOrganizationId() != null ? userAccount.getOrganizationId().toString() : null)
+                            primaryOrg != null ? primaryOrg.getOrganization().getOrganizationId().toString() : null)
                     .build();
         }
         return context;
+    }
+
+    @Override
+    public UserAccountDto getUserById(Long userId) {
+        Optional<UserAccount> userAccountOpt = userAccountRepository.findById(userId);
+
+        if (userAccountOpt.isEmpty()) {
+            throw new BusinessException("No user account found for userId: " + userId);
+        }
+
+        UserAccount userAccount = userAccountOpt.get();
+        Optional<Organization> organizationOpt = resolveOrganization(userAccount);
+
+        return constructUserDto(userAccount, organizationOpt);
+    }
+
+    @Override
+    public List<UserAccountDto> getUsersByOrgId(String orgId) {
+        Optional<Organization> organizationOpt = organizationRepository.findByOrganizationId(UUID.fromString(orgId));
+        if (organizationOpt.isEmpty()) {
+            throw new BusinessException("No organization found for orgId: " + orgId);
+        }
+
+        List<UserOrganization> userOrgs = userOrganizationRepository.findByOrganization(organizationOpt.get());
+        return userOrgs.stream()
+                .map(UserOrganization::getUser)
+                .map(userAccount -> constructUserDto(userAccount, organizationOpt))
+                .toList();
     }
 
     /**

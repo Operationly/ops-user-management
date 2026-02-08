@@ -3,8 +3,13 @@ package com.operationly.usermanagement.service;
 import com.operationly.usermanagement.dto.UserAccountDto;
 import com.operationly.usermanagement.entity.Organization;
 import com.operationly.usermanagement.entity.UserAccount;
+import com.operationly.usermanagement.entity.UserOrganization;
+import com.operationly.usermanagement.entity.Plan;
+import com.operationly.usermanagement.entity.Role;
+import com.operationly.usermanagement.entity.Status;
 import com.operationly.usermanagement.repository.OrganizationRepository;
 import com.operationly.usermanagement.repository.UserAccountRepository;
+import com.operationly.usermanagement.repository.UserOrganizationRepository;
 import com.operationly.usermanagement.service.impl.UserAccountServiceImpl;
 import com.workos.usermanagement.models.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +19,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,6 +36,9 @@ class UserAccountServiceTest {
 
     @Mock
     private OrganizationRepository organizationRepository;
+
+    @Mock
+    private UserOrganizationRepository userOrganizationRepository;
 
     @Mock
     private WorkOSService workOSService;
@@ -65,7 +75,6 @@ class UserAccountServiceTest {
                 .lastName(LAST_NAME)
                 .emailVerified(true)
                 .profilePictureUrl("http://pic.url")
-                .role(UserAccount.Role.USER)
                 .build();
 
         when(userAccountRepository.save(any(UserAccount.class))).thenReturn(savedUser);
@@ -74,7 +83,7 @@ class UserAccountServiceTest {
 
         assertNotNull(result);
         assertEquals(EMAIL, result.getEmail());
-        verify(userAccountRepository).save(any(UserAccount.class));
+        verify(userAccountRepository, atLeastOnce()).save(any(UserAccount.class));
     }
 
     @Test
@@ -85,7 +94,6 @@ class UserAccountServiceTest {
                 .id(1L)
                 .workosUserId(WORKOS_USER_ID)
                 .email("old@example.com")
-                .role(UserAccount.Role.USER)
                 .build();
 
         when(userAccountRepository.findByWorkosUserId(WORKOS_USER_ID)).thenReturn(Optional.of(existingUser));
@@ -106,44 +114,57 @@ class UserAccountServiceTest {
                 .id(1L)
                 .workosUserId(WORKOS_USER_ID)
                 .email(EMAIL)
-                .organizationId(null)
-                .role(UserAccount.Role.USER)
                 .build();
 
         UUID orgId = UUID.randomUUID();
+        Organization mockOrg = Organization.builder()
+                .organizationId(orgId)
+                .name("Test Org")
+                .plan(Plan.FREE)
+                .status(Status.ACTIVE)
+                .build();
 
         when(userAccountRepository.findByWorkosUserId(WORKOS_USER_ID)).thenReturn(Optional.of(existingUser));
         when(userAccountRepository.save(any(UserAccount.class))).thenReturn(existingUser);
+        when(userOrganizationRepository.findByUser(existingUser)).thenReturn(Collections.emptyList());
+        when(organizationRepository.findByOrganizationId(orgId)).thenReturn(Optional.of(mockOrg));
 
         userAccountService.syncUserAccount(WORKOS_USER_ID, orgId);
 
-        assertEquals(orgId, existingUser.getOrganizationId());
+        verify(userOrganizationRepository).save(any(UserOrganization.class));
     }
 
     @Test
     void syncUserAccount_ExistingUser_ShouldNotUpdateOrganizationIfNotNull() {
         when(workOSService.getWorkOsUserById(WORKOS_USER_ID)).thenReturn(workosUser);
 
-        UUID oldOrgId = UUID.randomUUID();
         UserAccount existingUser = UserAccount.builder()
                 .id(1L)
                 .workosUserId(WORKOS_USER_ID)
                 .email(EMAIL)
-                .organizationId(oldOrgId)
-                .role(UserAccount.Role.USER)
                 .build();
 
         UUID newOrgId = UUID.randomUUID();
+        UUID oldOrgId = UUID.randomUUID();
+        Organization oldOrg = Organization.builder()
+                .organizationId(oldOrgId)
+                .name("Old Org")
+                .plan(Plan.FREE)
+                .status(Status.ACTIVE)
+                .build();
 
-        Organization mockOrg = mock(Organization.class);
-        when(mockOrg.getOrganizationId()).thenReturn(oldOrgId);
+        UserOrganization existingUserOrg = UserOrganization.builder()
+                .user(existingUser)
+                .organization(oldOrg)
+                .role(Role.MEMBER)
+                .build();
 
         when(userAccountRepository.findByWorkosUserId(WORKOS_USER_ID)).thenReturn(Optional.of(existingUser));
         when(userAccountRepository.save(any(UserAccount.class))).thenReturn(existingUser);
-        when(organizationRepository.findByOrganizationId(oldOrgId)).thenReturn(Optional.of(mockOrg));
+        when(userOrganizationRepository.findByUser(existingUser)).thenReturn(List.of(existingUserOrg));
 
         userAccountService.syncUserAccount(WORKOS_USER_ID, newOrgId);
 
-        assertEquals(oldOrgId, existingUser.getOrganizationId());
+        verify(userOrganizationRepository, never()).save(any(UserOrganization.class));
     }
 }

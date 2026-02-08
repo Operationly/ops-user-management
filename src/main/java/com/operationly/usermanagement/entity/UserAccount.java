@@ -4,13 +4,14 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "user_account", indexes = {
-    @Index(name = "idx_workos_user_id", columnList = "workos_user_id", unique = true),
-    @Index(name = "idx_email", columnList = "email"),
-    @Index(name = "idx_organization_id", columnList = "organization_id")
+        @Index(name = "idx_workos_user_id", columnList = "workos_user_id", unique = true),
+        @Index(name = "idx_email", columnList = "email"),
+        @Index(name = "idx_organization_id", columnList = "organization_id")
 })
 @Data
 @NoArgsConstructor
@@ -25,8 +26,11 @@ public class UserAccount {
     @Column(name = "workos_user_id", nullable = false, unique = true, length = 255)
     private String workosUserId;
 
-    @Column(name = "organization_id", nullable = true, updatable = true)
-    private UUID organizationId;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Builder.Default
+    private List<UserOrganization> userOrganizations = new ArrayList<>();
 
     @Column(name = "email", nullable = false, length = 255)
     private String email;
@@ -36,9 +40,6 @@ public class UserAccount {
 
     @Column(name = "last_name", length = 255)
     private String lastName;
-
-    @Column(name = "role", length = 100)
-    private Role role;
 
     @Column(name = "email_verified", nullable = false)
     @Builder.Default
@@ -71,15 +72,4 @@ public class UserAccount {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
-    @Getter
-    @RequiredArgsConstructor
-    public enum Role {
-        USER("USER"),
-        ADMIN("ADMIN"),
-        SUPER_ADMIN("SUPER_ADMIN");
-
-        private final String value;
-    }
 }
-

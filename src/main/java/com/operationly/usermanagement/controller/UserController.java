@@ -1,19 +1,17 @@
 package com.operationly.usermanagement.controller;
 
 import com.operationly.usermanagement.dto.BaseResponse;
-import com.operationly.usermanagement.dto.ErrorDetails;
 import com.operationly.usermanagement.dto.UserAccountDto;
 import com.operationly.usermanagement.dto.UserContextDto;
+import com.operationly.usermanagement.exception.BusinessException;
 import com.operationly.usermanagement.service.UserAccountService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
+import java.util.List;
 
-import static com.operationly.usermanagement.constants.UserConstants.FAILURE;
 import static com.operationly.usermanagement.constants.UserConstants.SUCCESS;
 
 @RestController
@@ -26,38 +24,22 @@ public class UserController {
 
     /**
      * Sync API endpoint.
-     * Handles signup and login flows by syncing WorkOS user data with local database.
+     * Handles signup and login flows by syncing WorkOS user data with local
+     * database.
      */
     @GetMapping("/sync")
     public ResponseEntity<BaseResponse<UserAccountDto>> syncUser(
             @RequestHeader(value = "x-workos-user-id") String workosUserId) {
 
-        BaseResponse<UserAccountDto> response = new BaseResponse<>();
-        ErrorDetails errorDetails = new ErrorDetails();
-
-        try {
-            if (workosUserId == null || workosUserId.isEmpty()) {
-                log.error("x-workos-user-id header is missing or empty");
-                response.setStatus(FAILURE);
-                errorDetails.setError("Missing required header");
-                errorDetails.setMessage("x-workos-user-id header is required");
-                response.setErrors(Collections.singletonList(errorDetails));
-                return ResponseEntity.badRequest().body(response);
-            }
-
-            response.setStatus(SUCCESS);
-            response.setResponse(userAccountService.syncUserAccount(workosUserId, null));
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            log.error("Error syncing user: {}", e.getMessage(), e);
-            response.setStatus(FAILURE);
-            errorDetails.setError("Failed to sync user");
-            errorDetails.setMessage(e.getMessage());
-            response.setErrors(Collections.singletonList(errorDetails));
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        if (workosUserId == null || workosUserId.isEmpty()) {
+            throw new BusinessException("Missing required header", "x-workos-user-id header is required");
         }
+
+        BaseResponse<UserAccountDto> response = new BaseResponse<>();
+        response.setStatus(SUCCESS);
+        response.setResponse(userAccountService.syncUserAccount(workosUserId, null));
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -67,34 +49,39 @@ public class UserController {
     public ResponseEntity<BaseResponse<UserAccountDto>> getUserDetails(
             @RequestHeader(value = "x-workos-user-id") String workosUserId) {
 
-        BaseResponse<UserAccountDto> response = new BaseResponse<>();
-        ErrorDetails errorDetails = new ErrorDetails();
-
-        try {
-            if (workosUserId == null || workosUserId.isEmpty()) {
-                log.error("x-workos-user-id header is missing or empty");
-                response.setStatus(FAILURE);
-                errorDetails.setError("Missing required header");
-                errorDetails.setMessage("x-workos-user-id header is required");
-                response.setErrors(Collections.singletonList(errorDetails));
-                return ResponseEntity.badRequest().body(response);
-            }
-
-            var userAccountDto = userAccountService.getUserInfo(workosUserId);
-
-            response.setStatus(SUCCESS);
-            response.setResponse(userAccountDto);
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            log.error("Error getting user details: {}", e.getMessage(), e);
-            response.setStatus(FAILURE);
-            errorDetails.setError("Failed to retrieve user details");
-            errorDetails.setMessage(e.getMessage());
-            response.setErrors(Collections.singletonList(errorDetails));
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        if (workosUserId == null || workosUserId.isEmpty()) {
+            throw new BusinessException("Missing required header", "x-workos-user-id header is required");
         }
+
+        BaseResponse<UserAccountDto> response = new BaseResponse<>();
+        var userAccountDto = userAccountService.getUserInfo(workosUserId);
+
+        response.setStatus(SUCCESS);
+        response.setResponse(userAccountDto);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<BaseResponse<UserAccountDto>> getUserById(@PathVariable Long userId) {
+        BaseResponse<UserAccountDto> response = new BaseResponse<>();
+        var userAccountDto = userAccountService.getUserById(userId);
+
+        response.setStatus(SUCCESS);
+        response.setResponse(userAccountDto);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/org/{orgId}")
+    public ResponseEntity<BaseResponse<List<UserAccountDto>>> getUsersByOrgId(@PathVariable String orgId) {
+        BaseResponse<List<UserAccountDto>> response = new BaseResponse<>();
+        var userAccounts = userAccountService.getUsersByOrgId(orgId);
+
+        response.setStatus(SUCCESS);
+        response.setResponse(userAccounts);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/context")
@@ -106,17 +93,5 @@ public class UserController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(userContextDto);
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<BaseResponse<?>> handleException(Exception e) {
-        BaseResponse<?> response = new BaseResponse<>();
-        ErrorDetails errorDetails = new ErrorDetails();
-        log.error("Unhandled exception: {}", e.getMessage(), e);
-        response.setStatus(FAILURE);
-        errorDetails.setError("Internal server error");
-        errorDetails.setMessage(e.getMessage());
-        response.setErrors(Collections.singletonList(errorDetails));
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 }

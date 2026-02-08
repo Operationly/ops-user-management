@@ -1,11 +1,11 @@
 package com.operationly.usermanagement.service;
 
-import com.operationly.usermanagement.entity.Organization;
+import com.operationly.usermanagement.dto.OrganizationDto;
 
-import java.util.Optional;
-import java.util.UUID;
+import java.util.List;
 
 public interface OrganizationService {
     void createOrganizationAndAttachToUser(String workosUserId, String organizationName);
-    Optional<Organization> getOrganizationById(UUID organizationId);
+    OrganizationDto getOrganizationById(String organizationId);
+    List<OrganizationDto> getAllOrganizations();
 }

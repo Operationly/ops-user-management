@@ -9,6 +9,7 @@
     <include file="liquibase/changelogs/002_new_column_in_user_account.xml"/>
     <include file="liquibase/changelogs/003_rename_tenant_column.xml"/>
     <include file="liquibase/changelogs/004_column_role_in_user_account.xml"/>
+    <include file="liquibase/changelogs/005_create_user_organization_table.xml"/>
 
 </databaseChangeLog>
 
